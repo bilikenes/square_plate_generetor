@@ -18,6 +18,6 @@ def generate_turkish_plate():
     
     return part1 + part2
 
-with open("plates/plates_5.txt", "a") as f:
-    for _ in range(25000):
+with open(r"C:\Users\PC\Desktop\square_plates\plates.txt", "a") as f:
+    for _ in range(100000):
         f.write(generate_turkish_plate() + "\n")

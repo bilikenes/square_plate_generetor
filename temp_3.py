@@ -24,10 +24,10 @@ def split_plate(plate):
 font = ImageFont.truetype('resources/din1451alt.ttf', size=310)
 color = 'rgb(0, 0, 0)'
 
-output_dir = "plates/generated_plates_4"
+output_dir = r"C:\Users\PC\Desktop\square_plates\plates"
 os.makedirs(output_dir, exist_ok=True)
 
-with open("plates/plates_5.txt", "r", encoding="utf-8") as f:
+with open(r"C:\Users\PC\Desktop\square_plates\plates.txt", "r", encoding="utf-8") as f:
     plates = f.read().splitlines()
 
 for idx, plate in enumerate(plates, start=1):

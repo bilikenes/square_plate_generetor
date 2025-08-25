@@ -90,23 +90,72 @@ def subtle_sharpen(img):
     kernel = np.array([[0,-1,0],[-1,5.5,-1],[0,-1,0]], dtype=np.float32)
     return cv2.filter2D(img, -1, kernel)
 
+def low_light(img, factor=None):
+    if factor is None:
+        factor = uniform(0.25, 0.6) 
+    out = np.clip(img.astype(np.float32) * factor, 0, 255).astype(np.uint8)
+    out = add_noise(out, sigma=uniform(15,35))
+    return out
+
+def overexpose(img):
+    img = img.astype(np.float32)
+    mask = np.random.uniform(0.7, 1.0, img.shape[:2])[...,None]
+    out = img + 180*mask  # highlight glare
+    return np.clip(out,0,255).astype(np.uint8)
+
+def add_shadow(img):
+    h,w = img.shape[:2]
+    mask = np.ones((h,w), np.float32)
+    x1, y1 = randint(0,w//2), 0
+    x2, y2 = randint(w//2,w), h
+    poly = np.array([[x1,y1],[x2,y1],[x2,y2],[x1,y2]], np.int32)
+    shadow = np.zeros((h,w), np.float32)
+    cv2.fillPoly(shadow, [poly], 0.5)  # %50 koyuluk
+    mask = np.minimum(mask, shadow+0.5)
+    return np.clip(img.astype(np.float32) * mask[...,None], 0, 255).astype(np.uint8)
+
+def add_fog(img, strength=0.4):
+    h,w = img.shape[:2]
+    fog = np.full((h,w,3), 255, np.uint8)
+    alpha = cv2.GaussianBlur(np.random.rand(h,w).astype(np.float32),
+                             (w//3|1, h//3|1), 0)
+    alpha = (alpha/alpha.max()) * strength
+    return np.clip(img*(1-alpha[...,None]) + fog*alpha[...,None], 0,255).astype(np.uint8)
+
+def chromatic_aberration(img, shift=2):
+    b,g,r = cv2.split(img)
+    M1 = np.float32([[1,0,shift],[0,1,shift]])
+    r = cv2.warpAffine(r, M1, (img.shape[1], img.shape[0]))
+    M2 = np.float32([[1,0,-shift],[0,1,-shift]])
+    b = cv2.warpAffine(b, M2, (img.shape[1], img.shape[0]))
+    return cv2.merge([b,g,r])
+
+
+def environment_effects(img):
+    funcs = [low_light, overexpose, add_shadow, add_fog, chromatic_aberration]
+    if random() < 0.7:
+        func = choice(funcs)
+        return func(img)
+    return img
+
+
 def degrade_pipeline(img):
     img = img.copy()
     img = motion_blur(img, k=randint(1,3))
     img = add_noise(img, sigma=uniform(8,18))
     img = down_up(img)
     img = erode_ink(img)
+
+    # Yeni çevresel efektler
+    img = environment_effects(img)
+
     img = vignette(img, strength=uniform(0.4,0.9))
-    #img = random_occlusions(img)
     img = jpeg_compress(img, q=randint(18,35))
     img = np.array(255 * (img / 255) ** 2.3, dtype='uint8')
-    #img = subtle_sharpen(img)
     return img
 
-
-
-input_folder = "plates/perspective_plates"   
-output_folder = "plates/realistic_plates" 
+input_folder = r"C:\Users\PC\Desktop\square_plates\perspectived_plates"   
+output_folder = r"C:\Users\PC\Desktop\square_plates\realistic_plates" 
 os.makedirs(output_folder, exist_ok=True)
 
 for fname in os.listdir(input_folder):
@@ -116,6 +165,15 @@ for fname in os.listdir(input_folder):
     img = cv2.imread(in_path)
 
     degraded = degrade_pipeline(img)
-    cv2.imwrite(out_path, degraded)
 
-    print(f" ok : {fname}")
+    new_w = randint(110, 130)
+    new_h = randint(60, 70)
+    degraded = cv2.resize(degraded, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    degraded = cv2.GaussianBlur(degraded, (3, 3), 0)
+    noise = np.random.normal(0, 15, degraded.shape).astype(np.int16)
+    degraded = np.clip(degraded.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+
+    out_jpg = os.path.splitext(out_path)[0] + ".jpg"
+    cv2.imwrite(out_jpg, degraded, [int(cv2.IMWRITE_JPEG_QUALITY), randint(10, 20)])
+
