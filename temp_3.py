@@ -7,57 +7,58 @@ def split_plate(plate):
     if match:
         num, letters, lastnum = match.groups()
         if(len(letters) == 1):
-            part1 = f"{num}    {letters} "
+            part1 = f"{num}  {letters}  {lastnum}  "
             part2 = f"{lastnum}"
         elif(len(letters) == 2):
-            part1 = f"{num} {letters} "
+            part1 = f"{num}  {letters} {lastnum}  "
             part2 = f"{lastnum}"
         else:
-            part1 = f"{num} {letters}"
+            part1 = f"{num} {letters} {lastnum}  "
             part2 = f"{lastnum}"
 
-        
         return part1, part2
     else:
         return None, None
+def DE_split_plate(plate):
+    match = re.match(r"^([A-Z]+)(\d+)$", plate.strip().upper())
+    if match:
+        letters, num = match.groups()
+        
+        part1 = letters + "          "
+        part2 = num + "  "
 
+        return part2, part1
+    else:
+        return None, None
 font = ImageFont.truetype('resources/din1451alt.ttf', size=310)
 color = 'rgb(0, 0, 0)'
 
-output_dir = r"C:\Users\PC\Desktop\square_plates\plates"
+output_dir = r"D:\Medias\normal_plates\temp"
 os.makedirs(output_dir, exist_ok=True)
 
-with open(r"C:\Users\PC\Desktop\square_plates\plates.txt", "r", encoding="utf-8") as f:
+with open(r"D:\Medias\DE_normal_plates.txt", "r", encoding="utf-8") as f:
     plates = f.read().splitlines()
 
 for idx, plate in enumerate(plates, start=1):
 
-    part1, part2 = split_plate(plate)
-    image = Image.open('resources/CZ-number-plate-2004-US.png')
+    part1, part2 = DE_split_plate(plate)
+    image = Image.open('resources/DE-Plate.png')
     draw = ImageDraw.Draw(image)
 
     bbox1 = draw.textbbox((0, 0), part1, font=font)
     text_width1 = bbox1[2] - bbox1[0]
-
-    max_x1 = 1100 
+    max_x1 = 1784
     x1 = max_x1 - text_width1
     y1 = 0
-
     draw.text((x1, y1), part1, fill=color, font=font)
 
     bbox2 = draw.textbbox((0, 0), part2, font=font)
     text_width2 = bbox2[2] - bbox2[0]
-
-    plate_center_x = 700 
+    plate_center_x = 874
     x2 = plate_center_x - text_width2 // 2
-    y2 = 350
-
+    y2 = 0
     draw.text((x2, y2), part2, fill=color, font=font)
 
     file_name = os.path.join(output_dir, f"{plate}.png")
     image.save(file_name)
-    
-
-    print(" ok : " + file_name)
-
-print("ok!")
+    print("ok:", file_name)

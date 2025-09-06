@@ -41,13 +41,14 @@ def color_jitter(img, brightness=0.25, contrast=0.35, saturation=0.15):
     hsv[...,1] = np.clip(hsv[...,1] * (1.0 + uniform(-saturation, saturation)), 0, 255)
     return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
 
-def vignette(img, strength=0.7):
+def vignette(img, strength=0.4):
     h, w = img.shape[:2]
     X = cv2.getGaussianKernel(w, w*strength)
     Y = cv2.getGaussianKernel(h, h*strength)
     mask = (Y @ X.T)
     mask = mask / mask.max()
-    mask = (mask[..., None])
+    mask = mask[..., None]
+    mask = 0.3 + 0.7*mask
     return np.clip(img.astype(np.float32) * mask + (1-mask) * 255, 0, 255).astype(np.uint8)
 
 def jpeg_compress(img, q=None):
@@ -92,7 +93,7 @@ def subtle_sharpen(img):
 
 def low_light(img, factor=None):
     if factor is None:
-        factor = uniform(0.25, 0.6) 
+        factor = uniform(0.4, 0.6) 
     out = np.clip(img.astype(np.float32) * factor, 0, 255).astype(np.uint8)
     out = add_noise(out, sigma=uniform(15,35))
     return out
@@ -145,18 +146,16 @@ def degrade_pipeline(img):
     img = add_noise(img, sigma=uniform(8,18))
     img = down_up(img)
     img = erode_ink(img)
-
-    # Yeni çevresel efektler
     img = environment_effects(img)
-
     img = vignette(img, strength=uniform(0.4,0.9))
     img = jpeg_compress(img, q=randint(18,35))
     img = np.array(255 * (img / 255) ** 2.3, dtype='uint8')
     return img
 
-input_folder = r"C:\Users\PC\Desktop\square_plates\perspectived_plates"   
-output_folder = r"C:\Users\PC\Desktop\square_plates\realistic_plates" 
+input_folder = r"D:\Medias\normal_plates\TR\result"   
+output_folder = r"D:\Medias\normal_plates\TR\result_1" 
 os.makedirs(output_folder, exist_ok=True)
+count = 0
 
 for fname in os.listdir(input_folder):
     in_path = os.path.join(input_folder, fname)
@@ -175,5 +174,6 @@ for fname in os.listdir(input_folder):
     degraded = np.clip(degraded.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 
     out_jpg = os.path.splitext(out_path)[0] + ".jpg"
-    cv2.imwrite(out_jpg, degraded, [int(cv2.IMWRITE_JPEG_QUALITY), randint(10, 20)])
-
+    cv2.imwrite(out_jpg, degraded, [int(cv2.IMWRITE_JPEG_QUALITY), randint(65, 75)])
+    print(count)
+    count += 1
